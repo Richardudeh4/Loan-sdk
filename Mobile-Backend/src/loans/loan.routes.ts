@@ -24,7 +24,8 @@ const applyLimiter = rateLimit({
 router.get('/loans/calculate', validate(s.calculateLoanSchema), asyncHandler(c.calculateLoan));
 
 // ── All routes below require a valid access token ──────────────────────────────
-router.use(requireAuth);
+// Scoped to these paths so unknown /v1/* routes still fall through to the 404 handler
+router.use(['/loans', '/repayments'], requireAuth);
 
 router.post('/loans', applyLimiter, validate(s.applyLoanSchema), asyncHandler(c.applyLoan));
 router.get('/loans', asyncHandler(c.listLoans));

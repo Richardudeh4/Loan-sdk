@@ -23,7 +23,16 @@ type InstalmentRow = {
  * leave the data in an inconsistent state.
  */
 export async function markOverdueInstalments(): Promise<void> {
-  const client = await pool.connect();
+  // Connection failures must not escape: this runs from setInterval with no
+  // caller to catch, so an unhandled rejection would crash the whole server.
+  let client;
+  try {
+    client = await pool.connect();
+  } catch (err) {
+    console.error('[markOverdue] Could not connect to database, will retry next run:', err);
+    return;
+  }
+
   try {
     await client.query('BEGIN');
 
@@ -83,7 +92,7 @@ export async function markOverdueInstalments(): Promise<void> {
       console.log(`[markOverdue] Processed ${overdueRows.length} overdue instalment(s)`);
     }
   } catch (err) {
-    await client.query('ROLLBACK');
+    await client.query('ROLLBACK').catch(() => {});
     console.error('[markOverdue] Failed:', err);
   } finally {
     client.release();
