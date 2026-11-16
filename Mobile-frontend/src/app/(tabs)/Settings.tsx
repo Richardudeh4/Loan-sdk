@@ -7,6 +7,7 @@ import {
   Switch,
   Alert,
   Image,
+  Keyboard,
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -81,7 +82,10 @@ function Group({ title, children }: { title: string; children: React.ReactNode }
 // ── Edit profile sheet content ────────────────────────────────────────────────
 function EditProfileForm({
   onSaved,
+  onBusyChange,
 }: {
+  /** Lets the parent stop the sheet being swiped away mid-save */
+  onBusyChange?: (busy: boolean) => void;
   onSaved: (updated: { firstName: string | null; lastName: string | null; email: string | null; profileImage: string | null }) => void;
 }) {
   const { user } = useAuthStore();
@@ -114,7 +118,10 @@ function EditProfileForm({
   };
 
   const handleSave = async () => {
+    if (saving) return;
+    Keyboard.dismiss();
     setSaving(true);
+    onBusyChange?.(true);
     setError('');
     try {
       let newProfileImage = user?.profileImage ?? null;
@@ -161,6 +168,7 @@ function EditProfileForm({
       setError(msg);
     } finally {
       setSaving(false);
+      onBusyChange?.(false);
     }
   };
 
@@ -171,7 +179,14 @@ function EditProfileForm({
         This is how you appear across Fundly.
       </AppText>
 
-      <Pressable style={styles.photoPicker} onPress={pickImage} accessibilityRole="button" accessibilityLabel="Change profile photo">
+      <Pressable
+        style={[styles.photoPicker, saving && { opacity: 0.5 }]}
+        onPress={pickImage}
+        disabled={saving}
+        accessibilityRole="button"
+        accessibilityLabel="Change profile photo"
+        accessibilityState={{ disabled: saving }}
+      >
         {previewUri ? (
           <Image source={{ uri: previewUri }} style={styles.photoPreview} />
         ) : (
@@ -193,6 +208,7 @@ function EditProfileForm({
             placeholderTextColor={Colors.text.faint}
             value={firstName}
             onChangeText={setFirstName}
+            editable={!saving}
             autoCapitalize="words"
           />
         </View>
@@ -204,6 +220,7 @@ function EditProfileForm({
             placeholderTextColor={Colors.text.faint}
             value={lastName}
             onChangeText={setLastName}
+            editable={!saving}
             autoCapitalize="words"
           />
         </View>
@@ -216,6 +233,7 @@ function EditProfileForm({
         placeholderTextColor={Colors.text.faint}
         value={email}
         onChangeText={setEmail}
+        editable={!saving}
         keyboardType="email-address"
         autoCapitalize="none"
       />
@@ -243,6 +261,7 @@ export default function SettingsScreen() {
   const [loggingOut, setLoggingOut] = useState(false);
 
   const sheetRef = useRef<BottomSheet>(null);
+  const [profileSaving, setProfileSaving] = useState(false);
   const snapPoints = ['75%', '92%'];
 
   const displayName = user?.firstName
@@ -258,9 +277,15 @@ export default function SettingsScreen() {
 
   const renderBackdrop = useCallback(
     (props: BottomSheetBackdropProps) => (
-      <BottomSheetBackdrop {...props} appearsOnIndex={0} disappearsOnIndex={-1} opacity={0.5} />
+      <BottomSheetBackdrop
+        {...props}
+        appearsOnIndex={0}
+        disappearsOnIndex={-1}
+        opacity={0.5}
+        pressBehavior={profileSaving ? 'none' : 'close'}
+      />
     ),
-    [],
+    [profileSaving],
   );
 
   const handleLogout = () => {
@@ -428,14 +453,14 @@ export default function SettingsScreen() {
         ref={sheetRef}
         index={-1}
         snapPoints={snapPoints}
-        enablePanDownToClose
+        enablePanDownToClose={!profileSaving}
         keyboardBehavior="extend"
         backdropComponent={renderBackdrop}
         backgroundStyle={{ backgroundColor: Colors.background, borderRadius: Radius.xl }}
         handleIndicatorStyle={{ backgroundColor: Colors.borderStrong, width: 40 }}
       >
         <BottomSheetView style={{ flex: 1 }}>
-          <EditProfileForm onSaved={closeSheet} />
+          <EditProfileForm onSaved={closeSheet} onBusyChange={setProfileSaving} />
         </BottomSheetView>
       </BottomSheet>
     </GestureHandlerRootView>

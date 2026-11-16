@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
-import { View, ScrollView, StyleSheet, Pressable, RefreshControl, TextInput } from 'react-native';
+import { View, ScrollView, StyleSheet, Pressable, RefreshControl, TextInput, Keyboard } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
@@ -234,6 +234,8 @@ function ApplyForm({
       setError(`Enter an amount between ₦${MIN_AMOUNT.toLocaleString()} and ₦${MAX_AMOUNT.toLocaleString()}`);
       return;
     }
+    if (loading) return;
+    Keyboard.dismiss();
     setLoading(true);
     setError('');
     try {
@@ -279,6 +281,7 @@ function ApplyForm({
         label="Loan amount"
         value={amountStr}
         onChangeText={(t) => { setError(''); setAmountStr(t.replace(/[^0-9.]/g, '')); }}
+        editable={!loading}
         error={amountStr !== '' && !isValid ? `Choose between ₦${MIN_AMOUNT.toLocaleString()} and ₦${MAX_AMOUNT.toLocaleString()}` : undefined}
         hint={`Between ₦${MIN_AMOUNT.toLocaleString()} and ₦${MAX_AMOUNT.toLocaleString()}`}
       />
@@ -291,9 +294,10 @@ function ApplyForm({
             <Pressable
               key={t}
               onPress={() => setTerm(t)}
-              style={[styles.termChip, active && styles.termChipActive]}
+              disabled={loading}
+              style={[styles.termChip, active && styles.termChipActive, loading && styles.lockedWhileSubmitting]}
               accessibilityRole="radio"
-              accessibilityState={{ selected: active }}
+              accessibilityState={{ selected: active, disabled: loading }}
             >
               <AppText style={[styles.termNum, active && { color: Colors.text.inverse }]}>{t}</AppText>
               <AppText variant="caption" color={active ? 'rgba(255,255,255,0.75)' : Colors.text.muted}>
@@ -315,13 +319,15 @@ function ApplyForm({
         value={purpose}
         onChangeText={setPurpose}
         maxLength={100}
+        editable={!loading}
       />
       <View style={styles.suggestions}>
         {PURPOSE_SUGGESTIONS.map((p) => (
           <Pressable
             key={p}
             onPress={() => setPurpose(p)}
-            style={[styles.suggestion, purpose === p && styles.suggestionActive]}
+            disabled={loading}
+            style={[styles.suggestion, purpose === p && styles.suggestionActive, loading && styles.lockedWhileSubmitting]}
           >
             <AppText variant="caption" color={purpose === p ? Colors.primary : Colors.text.secondary} style={{ fontFamily: Fonts.semibold }}>
               {p}
@@ -548,6 +554,7 @@ const styles = StyleSheet.create({
     borderColor: Colors.border,
     backgroundColor: Colors.background,
   },
+  lockedWhileSubmitting: { opacity: 0.5 },
   termChipActive: { backgroundColor: Colors.ink[800], borderColor: Colors.ink[800] },
   termNum: { fontFamily: Fonts.serif, fontSize: 22, lineHeight: 26, color: Colors.text.primary },
 

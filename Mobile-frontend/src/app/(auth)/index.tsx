@@ -1,5 +1,5 @@
 import React, { useRef, useState } from 'react';
-import { View, StyleSheet, Pressable, Image, TextInput, useWindowDimensions } from 'react-native';
+import { View, StyleSheet, Pressable, Image, TextInput, useWindowDimensions, Keyboard } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
@@ -11,6 +11,7 @@ import { KeyboardView } from '@/components/KeyboardView';
 import { Colors, Spacing, Radius, Fonts } from '@/constants/theme';
 import { api, ApiError } from '@/RequestHandler/Request';
 import { toast } from 'sonner-native';
+import { cleanPhone as toApiPhone, validatePhone } from '@/utils/phone';
 
 export default function SignInScreen() {
   const router = useRouter();
@@ -28,20 +29,20 @@ export default function SignInScreen() {
   const [loading, setLoading] = useState(false);
 
   // The backend rejects spaces/dashes, but users naturally type "+234 801 234 5678"
-  const cleanPhone = phone.replace(/[^\d+]/g, '');
+  const cleanPhone = toApiPhone(phone);
 
   const validate = () => {
     const newErrors: typeof errors = {};
-    if (!cleanPhone) newErrors.phone = 'Phone number is required';
-    else if (cleanPhone.replace(/\D/g, '').length < 10) newErrors.phone = 'Enter a valid phone number';
+    newErrors.phone = validatePhone(phone);
     // No length rule here: sign-in should accept whatever password the account has
     if (!password) newErrors.password = 'Password is required';
     setErrors(newErrors);
-    return Object.keys(newErrors).length === 0;
+    return !newErrors.phone && !newErrors.password;
   };
 
   const handleSignIn = async () => {
     if (loading || !validate()) return;
+    Keyboard.dismiss();
     setLoading(true);
     try {
       await api.auth.login({ phone: cleanPhone, password });
@@ -122,7 +123,9 @@ export default function SignInScreen() {
             autoComplete="tel"
             textContentType="telephoneNumber"
             returnKeyType="next"
+            submitBehavior="submit"
             onSubmitEditing={() => passwordRef.current?.focus()}
+            editable={!loading}
           />
 
           <AppInput
@@ -138,13 +141,16 @@ export default function SignInScreen() {
             autoComplete="password"
             returnKeyType="go"
             onSubmitEditing={handleSignIn}
+            editable={!loading}
           />
 
           <Pressable
             onPress={() => router.push('/(auth)/forgot-password')}
+            disabled={loading}
             hitSlop={10}
-            style={styles.forgotLink}
+            style={[styles.forgotLink, loading && styles.linkDisabled]}
             accessibilityRole="link"
+            accessibilityState={{ disabled: loading }}
           >
             <AppText variant="label" color={Colors.primary}>
               Forgot password?
@@ -162,6 +168,7 @@ export default function SignInScreen() {
           <AppButton
             label="Continue with Google"
             onPress={() => toast.info('Google sign-in is coming soon')}
+            disabled={loading}
             variant="outline"
             leftIcon={<Ionicons name="logo-google" size={18} color={Colors.text.primary} />}
           />
@@ -174,7 +181,14 @@ export default function SignInScreen() {
           </View>
           <View style={styles.footerRow}>
             <AppText variant="bodySmall">New to Fundly? </AppText>
-            <Pressable onPress={() => router.push('/(auth)/register')} hitSlop={10} accessibilityRole="link">
+            <Pressable
+              onPress={() => router.push('/(auth)/register')}
+              disabled={loading}
+              hitSlop={10}
+              style={loading && styles.linkDisabled}
+              accessibilityRole="link"
+              accessibilityState={{ disabled: loading }}
+            >
               <AppText variant="bodySmall" color={Colors.primary} style={{ fontFamily: Fonts.bold }}>
                 Create an account
               </AppText>
@@ -200,6 +214,9 @@ const styles = StyleSheet.create({
   },
   title: { marginTop: 2 },
   form: { paddingHorizontal: Spacing.lg },
+  // Links that navigate away are locked while signing in, otherwise a late
+  // response would still push the OTP screen on top of wherever the user went
+  linkDisabled: { opacity: 0.4 },
   forgotLink: { alignSelf: 'flex-end', marginTop: -Spacing.xs, marginBottom: Spacing.lg },
   divider: { flexDirection: 'row', alignItems: 'center', marginVertical: Spacing.lg, gap: Spacing.md },
   dividerLine: { flex: 1, height: StyleSheet.hairlineWidth, backgroundColor: Colors.borderStrong },

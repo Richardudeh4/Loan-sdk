@@ -16,6 +16,8 @@ interface OTPInputProps {
   onChange: (value: string) => void;
   error?: boolean;
   autoFocus?: boolean;
+  /** Locks the code while it's being verified */
+  disabled?: boolean;
 }
 
 /**
@@ -23,7 +25,14 @@ interface OTPInputProps {
  * paste and backspace behaving natively instead of juggling focus between
  * six inputs.
  */
-export function OTPInput({ length = 6, value, onChange, error = false, autoFocus = true }: OTPInputProps) {
+export function OTPInput({
+  length = 6,
+  value,
+  onChange,
+  error = false,
+  autoFocus = true,
+  disabled = false,
+}: OTPInputProps) {
   const inputRef = useRef<TextInput>(null);
   const [focused, setFocused] = useState(false);
   const shake = useSharedValue(0);
@@ -41,13 +50,19 @@ export function OTPInput({ length = 6, value, onChange, error = false, autoFocus
   const shakeStyle = useAnimatedStyle(() => ({ transform: [{ translateX: shake.value }] }));
 
   const activeIndex = Math.min(value.length, length - 1);
+  const showFocus = focused && !disabled;
 
   return (
-    <Pressable onPress={() => inputRef.current?.focus()} accessibilityLabel="Verification code">
-      <Animated.View style={[styles.row, shakeStyle]}>
+    <Pressable
+      onPress={() => inputRef.current?.focus()}
+      disabled={disabled}
+      accessibilityLabel="Verification code"
+      accessibilityState={{ disabled }}
+    >
+      <Animated.View style={[styles.row, shakeStyle, disabled && styles.rowDisabled]}>
         {Array.from({ length }, (_, i) => {
           const digit = value[i] ?? '';
-          const isActive = focused && i === activeIndex && value.length < length + 1;
+          const isActive = showFocus && i === activeIndex && value.length < length + 1;
           return (
             <View
               key={i}
@@ -78,6 +93,7 @@ export function OTPInput({ length = 6, value, onChange, error = false, autoFocus
         autoComplete="sms-otp"
         maxLength={length}
         autoFocus={autoFocus}
+        editable={!disabled}
         caretHidden
         style={styles.hiddenInput}
       />
@@ -96,6 +112,7 @@ function Caret() {
 
 const styles = StyleSheet.create({
   row: { flexDirection: 'row', justifyContent: 'space-between', gap: Spacing.sm },
+  rowDisabled: { opacity: 0.6 },
   cell: {
     flex: 1,
     height: 60,

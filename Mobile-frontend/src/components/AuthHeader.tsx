@@ -12,10 +12,19 @@ interface AuthHeaderProps {
   subtitle?: string;
   eyebrow?: string;
   showBack?: boolean;
+  /** Disable the back button, e.g. while a request is in flight */
+  backDisabled?: boolean;
   style?: ViewStyle;
 }
 
-export function AuthHeader({ title, subtitle, eyebrow, showBack = true, style }: AuthHeaderProps) {
+export function AuthHeader({
+  title,
+  subtitle,
+  eyebrow,
+  showBack = true,
+  backDisabled = false,
+  style,
+}: AuthHeaderProps) {
   const router = useRouter();
   const insets = useSafeAreaInsets();
 
@@ -25,6 +34,7 @@ export function AuthHeader({ title, subtitle, eyebrow, showBack = true, style }:
         <IconButton
           icon="chevron-back"
           onPress={() => router.back()}
+          disabled={backDisabled}
           accessibilityLabel="Go back"
           style={styles.back}
         />

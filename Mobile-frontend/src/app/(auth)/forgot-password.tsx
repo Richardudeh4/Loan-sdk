@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
-import { View, StyleSheet } from 'react-native';
-import { useRouter } from 'expo-router';
+import { View, StyleSheet, Keyboard } from 'react-native';
+import { Stack, useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import Animated, { FadeInDown } from 'react-native-reanimated';
 import { AuthHeader } from '@/components/AuthHeader';
@@ -23,7 +23,8 @@ export default function ForgotPasswordScreen() {
   };
 
   const handleSendOTP = async () => {
-    if (!validate()) return;
+    if (loading || !validate()) return;
+    Keyboard.dismiss();
     setLoading(true);
     try {
       // TODO: call forgot password API
@@ -36,7 +37,9 @@ export default function ForgotPasswordScreen() {
 
   return (
     <KeyboardView>
+      <Stack.Screen options={{ gestureEnabled: !loading }} />
       <AuthHeader
+        backDisabled={loading}
         eyebrow="Account recovery"
         title="Reset your password"
         subtitle="Enter the email on your account and we'll send you a 6-digit reset code."
@@ -57,6 +60,7 @@ export default function ForgotPasswordScreen() {
           autoFocus
           returnKeyType="send"
           onSubmitEditing={handleSendOTP}
+          editable={!loading}
         />
 
         <AppButton label="Send reset code" onPress={handleSendOTP} loading={loading} />
@@ -71,6 +75,7 @@ export default function ForgotPasswordScreen() {
         <AppButton
           label="Back to sign in"
           onPress={() => router.back()}
+          disabled={loading}
           variant="ghost"
           style={{ marginTop: Spacing.md }}
         />

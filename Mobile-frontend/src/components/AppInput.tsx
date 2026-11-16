@@ -1,4 +1,4 @@
-import React, { forwardRef, useState } from 'react';
+import React, { forwardRef, useImperativeHandle, useRef, useState } from 'react';
 import {
   View,
   TextInput,
@@ -41,17 +41,26 @@ export const AppInput = forwardRef<TextInput, AppInputProps>(function AppInput(
     style,
     onFocus,
     onBlur,
+    editable = true,
     ...rest
   },
   ref,
 ) {
   const [isPasswordVisible, setIsPasswordVisible] = useState(false);
   const [isFocused, setIsFocused] = useState(false);
+  // Own ref so tapping anywhere on the field can focus the input; still exposed
+  // to parents via the forwarded ref (for "next field" chaining).
+  const inputRef = useRef<TextInput>(null);
+  useImperativeHandle(ref, () => inputRef.current as TextInput);
 
   const isSecure = showPasswordToggle ? !isPasswordVisible : secureTextEntry;
 
-  const borderColor = error ? Colors.error : isFocused ? Colors.primary : Colors.border;
-  const iconColor = error ? Colors.error : isFocused ? Colors.primary : Colors.text.muted;
+  // Pass editable={false} (e.g. while a form is submitting) to lock the field
+  const disabled = !editable;
+  const borderColor = error ? Colors.error : isFocused && !disabled ? Colors.primary : Colors.border;
+  const iconColor = disabled
+    ? Colors.text.faint
+    : error ? Colors.error : isFocused ? Colors.primary : Colors.text.muted;
 
   const start = leftIcon ?? (icon ? <Ionicons name={icon} size={18} color={iconColor} /> : null);
 
@@ -62,18 +71,26 @@ export const AppInput = forwardRef<TextInput, AppInputProps>(function AppInput(
           {label}
         </AppText>
       ) : null}
-      <View
+      {/* Whole field is the tap target — not just the text glyphs. accessible={false}
+          keeps screen readers focused on the TextInput itself. */}
+      <Pressable
+        onPress={() => inputRef.current?.focus()}
+        disabled={disabled}
+        accessible={false}
         style={[
           styles.field,
           { borderColor },
-          isFocused && !error && styles.fieldFocused,
+          isFocused && !error && !disabled && styles.fieldFocused,
           error ? styles.fieldError : null,
+          disabled && styles.fieldDisabled,
         ]}
       >
         {start ? <View style={styles.leftIcon}>{start}</View> : null}
         <TextInput
-          ref={ref}
-          style={[styles.input, start ? styles.inputWithLeft : null, style]}
+          ref={inputRef}
+          style={[styles.input, start ? styles.inputWithLeft : null, disabled && styles.inputDisabled, style]}
+          editable={editable}
+          accessibilityState={{ disabled }}
           placeholderTextColor={Colors.text.faint}
           selectionColor={Colors.primary}
           secureTextEntry={isSecure}
@@ -86,6 +103,7 @@ export const AppInput = forwardRef<TextInput, AppInputProps>(function AppInput(
           <Pressable
             style={styles.rightIcon}
             onPress={() => setIsPasswordVisible((v) => !v)}
+            disabled={disabled}
             hitSlop={8}
             accessibilityRole="button"
             accessibilityLabel={isPasswordVisible ? 'Hide password' : 'Show password'}
@@ -93,20 +111,20 @@ export const AppInput = forwardRef<TextInput, AppInputProps>(function AppInput(
             <Ionicons
               name={isPasswordVisible ? 'eye-off-outline' : 'eye-outline'}
               size={20}
-              color={Colors.text.muted}
+              color={disabled ? Colors.text.faint : Colors.text.muted}
             />
           </Pressable>
         ) : rightIcon ? (
           <Pressable
             style={styles.rightIcon}
             onPress={onRightIconPress}
-            disabled={!onRightIconPress}
+            disabled={disabled || !onRightIconPress}
             hitSlop={8}
           >
             {rightIcon}
           </Pressable>
         ) : null}
-      </View>
+      </Pressable>
       {error ? (
         <View style={styles.messageRow}>
           <Ionicons name="alert-circle" size={13} color={Colors.error} />
@@ -141,6 +159,7 @@ const styles = StyleSheet.create({
     shadowRadius: 6,
   },
   fieldError: { backgroundColor: '#FFFBFB' },
+  fieldDisabled: { backgroundColor: Colors.surfaceAlt, borderColor: Colors.border },
   input: {
     flex: 1,
     fontFamily: Fonts.medium,
@@ -150,6 +169,7 @@ const styles = StyleSheet.create({
     paddingVertical: Spacing.sm + 4,
   },
   inputWithLeft: { paddingLeft: Spacing.sm + 2 },
+  inputDisabled: { color: Colors.text.secondary },
   leftIcon: { paddingLeft: Spacing.md },
   // alignSelf: 'stretch' fills the row's height for a full-height tap target.
   // Don't use height: '100%' — the field has no fixed height, so a percentage

@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
-import { View, StyleSheet } from 'react-native';
-import { useRouter, useLocalSearchParams } from 'expo-router';
+import { View, StyleSheet, Keyboard } from 'react-native';
+import { Stack, useRouter, useLocalSearchParams } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import Animated, { FadeInDown, ZoomIn } from 'react-native-reanimated';
 import { AuthHeader } from '@/components/AuthHeader';
@@ -47,7 +47,8 @@ export default function ResetPasswordScreen() {
   };
 
   const handleReset = async () => {
-    if (!validate()) return;
+    if (loading || !validate()) return;
+    Keyboard.dismiss();
     setLoading(true);
     try {
       // TODO: call reset password API with email, otp, password
@@ -85,7 +86,9 @@ export default function ResetPasswordScreen() {
 
   return (
     <KeyboardView>
+      <Stack.Screen options={{ gestureEnabled: !loading }} />
       <AuthHeader
+        backDisabled={loading}
         eyebrow="Account recovery"
         title="Choose a new password"
         subtitle="Make it something you haven't used before on Fundly."
@@ -103,6 +106,7 @@ export default function ResetPasswordScreen() {
           textContentType="newPassword"
           autoFocus
           containerStyle={{ marginBottom: Spacing.sm + 2 }}
+          editable={!loading}
         />
 
         <View style={styles.strengthRow}>
@@ -128,6 +132,7 @@ export default function ResetPasswordScreen() {
           error={errors.confirmPassword}
           showPasswordToggle
           textContentType="newPassword"
+          editable={!loading}
         />
 
         <View style={styles.requirements}>

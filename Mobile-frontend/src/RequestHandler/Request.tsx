@@ -104,6 +104,8 @@ export interface SignupRequest {
   phone: string;
   email?: string;
   password: string;
+  firstName?: string;
+  lastName?: string;
 }
 export interface SignupResponse {
   message: string;

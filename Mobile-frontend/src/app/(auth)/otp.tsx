@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { View, StyleSheet, Pressable } from 'react-native';
-import { useRouter, useLocalSearchParams } from 'expo-router';
+import { View, StyleSheet, Pressable, Keyboard } from 'react-native';
+import { Stack, useRouter, useLocalSearchParams } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import Animated, { FadeInDown } from 'react-native-reanimated';
 import { AuthHeader } from '@/components/AuthHeader';
@@ -42,6 +42,8 @@ export default function OTPScreen() {
   const [otp, setOtp] = useState('');
   const [error, setError] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [resending, setResending] = useState(false);
+  const busy = loading || resending;
   const [countdown, setCountdown] = useState(OTP_RESEND_TIMEOUT);
   const [canResend, setCanResend] = useState(false);
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
@@ -72,10 +74,12 @@ export default function OTPScreen() {
   };
 
   const handleVerify = async () => {
+    if (busy) return;
     if (otp.length < 6) {
       setError(true);
       return;
     }
+    Keyboard.dismiss();
     setLoading(true);
     setError(false);
     try {
@@ -109,13 +113,16 @@ export default function OTPScreen() {
   };
 
   const handleResend = async () => {
-    if (!canResend) return;
+    if (!canResend || busy) return;
     if (isPhoneFlow && phone) {
+      setResending(true);
       try {
         await api.auth.sendOtp({ phone });
         toast.success('A new code is on its way');
       } catch {
         toast.error('Could not resend the code. Please try again.');
+      } finally {
+        setResending(false);
       }
     }
     setOtp('');
@@ -131,7 +138,9 @@ export default function OTPScreen() {
 
   return (
     <KeyboardView>
+      <Stack.Screen options={{ gestureEnabled: !busy }} />
       <AuthHeader
+        backDisabled={busy}
         eyebrow="Verification"
         title={isPhoneFlow ? 'Enter your code' : 'Check your email'}
         subtitle={`We sent a 6-digit code to ${destination}. It expires shortly.`}
@@ -146,7 +155,14 @@ export default function OTPScreen() {
             <AppText variant="caption">Sent to</AppText>
             <AppText variant="label">{destination}</AppText>
           </View>
-          <Pressable onPress={() => router.back()} hitSlop={10} accessibilityRole="button">
+          <Pressable
+            onPress={() => router.back()}
+            disabled={busy}
+            hitSlop={10}
+            style={busy && styles.disabled}
+            accessibilityRole="button"
+            accessibilityState={{ disabled: busy }}
+          >
             <AppText variant="label" color={Colors.primary}>Change</AppText>
           </Pressable>
         </View>
@@ -155,6 +171,7 @@ export default function OTPScreen() {
           value={otp}
           onChange={(v) => { setOtp(v); if (error) setError(false); }}
           error={error}
+          disabled={loading}
         />
 
         {error ? (
@@ -166,9 +183,16 @@ export default function OTPScreen() {
         <View style={styles.resendRow}>
           <AppText variant="bodySmall">Didn't get it? </AppText>
           {canResend ? (
-            <Pressable onPress={handleResend} hitSlop={10} accessibilityRole="button">
+            <Pressable
+              onPress={handleResend}
+              disabled={busy}
+              hitSlop={10}
+              style={busy && styles.disabled}
+              accessibilityRole="button"
+              accessibilityState={{ disabled: busy, busy: resending }}
+            >
               <AppText variant="bodySmall" color={Colors.primary} style={{ fontFamily: Fonts.bold }}>
-                Resend code
+                {resending ? 'Sending…' : 'Resend code'}
               </AppText>
             </Pressable>
           ) : (
@@ -182,7 +206,7 @@ export default function OTPScreen() {
           label="Verify and continue"
           onPress={handleVerify}
           loading={loading}
-          disabled={otp.length < 6}
+          disabled={otp.length < 6 || resending}
         />
       </Animated.View>
     </KeyboardView>
@@ -208,6 +232,7 @@ const styles = StyleSheet.create({
     alignItems: 'center', justifyContent: 'center',
   },
   errorText: { marginTop: Spacing.sm + 2 },
+  disabled: { opacity: 0.4 },
   resendRow: {
     flexDirection: 'row',
     alignItems: 'center',

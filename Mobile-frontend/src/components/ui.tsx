@@ -40,9 +40,11 @@ export function IconButton({
   badge,
   accessibilityLabel,
   style,
+  disabled = false,
 }: {
   icon: IconName;
   onPress?: () => void;
+  disabled?: boolean;
   variant?: 'surface' | 'glass' | 'plain' | 'tint';
   size?: number;
   iconSize?: number;
@@ -60,9 +62,11 @@ export function IconButton({
   return (
     <Pressable
       onPress={onPress}
+      disabled={disabled}
       hitSlop={6}
       accessibilityRole="button"
       accessibilityLabel={accessibilityLabel}
+      accessibilityState={{ disabled }}
       style={({ pressed }) => [
         {
           width: size,
@@ -71,7 +75,7 @@ export function IconButton({
           backgroundColor: bg,
           alignItems: 'center',
           justifyContent: 'center',
-          opacity: pressed ? 0.7 : 1,
+          opacity: disabled ? 0.4 : pressed ? 0.7 : 1,
         },
         variant === 'surface' && styles.iconBtnSurface,
         variant === 'glass' && { borderWidth: 1, borderColor: Colors.ink.line },
@@ -473,6 +477,7 @@ export function AmountField({
   onChangeText,
   error,
   hint,
+  editable = true,
   ...rest
 }: {
   label?: string;
@@ -488,7 +493,8 @@ export function AmountField({
       <View
         style={[
           styles.amountField,
-          { borderColor: error ? Colors.error : focused ? Colors.primary : Colors.border },
+          { borderColor: error ? Colors.error : focused && editable ? Colors.primary : Colors.border },
+          !editable && { backgroundColor: Colors.surfaceAlt, opacity: 0.7 },
         ]}
       >
         <AppText style={styles.amountPrefix}>₦</AppText>
@@ -502,6 +508,7 @@ export function AmountField({
           onChangeText={onChangeText}
           onFocus={() => setFocused(true)}
           onBlur={() => setFocused(false)}
+          editable={editable}
           accessibilityLabel={label ?? 'Amount in naira'}
           {...rest}
         />

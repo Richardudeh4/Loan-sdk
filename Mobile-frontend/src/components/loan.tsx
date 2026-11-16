@@ -259,7 +259,14 @@ export function ConfirmPaymentSheet({
 }) {
   const insets = useSafeAreaInsets();
   return (
-    <Modal visible={visible} transparent animationType="none" statusBarTranslucent onRequestClose={onCancel}>
+    <Modal
+      visible={visible}
+      transparent
+      animationType="none"
+      statusBarTranslucent
+      // Android back button: don't let it dismiss the sheet mid-payment
+      onRequestClose={loading ? () => {} : onCancel}
+    >
       {visible ? (
         <View style={{ flex: 1 }}>
           <Animated.View entering={FadeIn.duration(200)} style={StyleSheet.absoluteFill}>
