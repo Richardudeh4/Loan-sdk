@@ -151,7 +151,10 @@ const styles = StyleSheet.create({
   },
   inputWithLeft: { paddingLeft: Spacing.sm + 2 },
   leftIcon: { paddingLeft: Spacing.md },
-  rightIcon: { paddingRight: Spacing.md, paddingLeft: Spacing.xs, height: '100%', justifyContent: 'center' },
+  // alignSelf: 'stretch' fills the row's height for a full-height tap target.
+  // Don't use height: '100%' — the field has no fixed height, so a percentage
+  // makes Yoga balloon the whole input.
+  rightIcon: { paddingRight: Spacing.md, paddingLeft: Spacing.xs, alignSelf: 'stretch', justifyContent: 'center' },
   messageRow: { flexDirection: 'row', alignItems: 'center', marginTop: Spacing.sm - 2, gap: 4 },
   messageText: { flex: 1 },
   hint: { marginTop: Spacing.sm - 2 },
