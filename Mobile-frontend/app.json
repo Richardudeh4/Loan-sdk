@@ -1,7 +1,7 @@
 {
   "expo": {
     "name": "Fundly",
-    "slug": "Fundly",
+    "slug": "fundly",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/images/appstore.png",
@@ -58,9 +58,9 @@
     "extra": {
       "router": {},
       "eas": {
-        "projectId": "32304f56-ab74-4bce-9b18-6231ae06356a"
+        "projectId": "b90cc2e3-bc12-4e9e-a0d6-738bfff91e30"
       }
     },
-    "owner": "udeh"
+    "owner": "fundly-org"
   }
 }
